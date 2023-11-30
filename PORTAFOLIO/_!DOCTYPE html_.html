@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <div>Teachable Machine Pose Model</div>
+    <button type="button" onclick="init()">Start</button>
+    <div><canvas id="canvas"></canvas></div>
+    <div id="label-container"></div>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-4iX1AwIGc2hDkK4D4z5DTNE6MeHy25tA5FpCOg62GPF6c1JRVLQn+51toIS8tZRfDz99VOusCufx0rE2KslAqw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santiago Fierro</title>
+
+    <style>
+        body {
+            background-image: url('fondo1.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, h1, h2, h3, footer, p {
+            color: white;
+            font-family: 'Georgia', serif;
+        }
+
+        header {
+            background-color: rgb(255, 255, 255);
+            color: black;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+        }
+
+        nav a {
+            color: black;
+            margin: 0 20px;
+            text-decoration: none;
+        }
+
+        section {
+            margin: 50px 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        footer {
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .centrada {
+            display: block;
+            margin: auto;
+        }
+
+        section#Portafolio {
+            position: relative;
+        }
+
+        section#Portafolio::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        header.scrolled {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: black;
+        }
+
+        #teachable-machine {
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+    </style>
+
+</script>
+<script type="text/javascript">
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/pose
+
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "https://teachablemachine.withgoogle.com/models/6GhczM5fx/";
+    let model, webcam, ctx, labelContainer, maxPredictions;
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // Note: the pose library adds a tmPose object to your window (window.tmPose)
+        model = await tmPose.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const size = 200;
+        const flip = true; // whether to flip the webcam
+        webcam = new tmPose.Webcam(size, size, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append/get elements to the DOM
+        const canvas = document.getElementById("canvas");
+        canvas.width = size; canvas.height = size;
+        ctx = canvas.getContext("2d");
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) { // and class labels
+            labelContainer.appendChild(document.createElement("div"));
+        }
+    }
+
+    async function loop(timestamp) {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+        // Prediction #1: run input through posenet
+        // estimatePose can take in an image, video or canvas html element
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        // Prediction 2: run input through teachable machine classification model
+        const prediction = await model.predict(posenetOutput);
+
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
+        }
+
+        // finally draw the poses
+        drawPose(pose);
+    }
+
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            // draw the keypoints and skeleton
+            if (pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    }
+</script>
+
+</head>
+
+<body>
+    <header>
+        <nav>
+            <a href="#Portafolio">Portafolio:</a>
+            <a href="#UltimateFitTracker">Ultimate Fit Tracker:</a>
+            <a href="#Reconocimientodetécnica">Reconocimiento de técnica:</a>
+            <a href="#EncuestaStackOverflow">Encuesta StackOverflow:</a>
+            <a href="#Tecnologías">Tecnologías en las aplicaciones:</a>
+            <a href="#Github">Github:</a>
+            <a href="#Contacto">Contacto:</a>
+        </nav>
+    </header>
+    <section id="Portafolio">
+        <h1>Hola, mi nombre es Santiago Emilio Hernández Fierro, y este es mi portafolio web.</h1>
+    </section>
+
+    <section id="iconos" class="icon-container">
+        <i class="fas fa-heart" data-toggle="tooltip" title="Me gusta"></i>
+        <i class="fas fa-comment" data-toggle="tooltip" title="Comentario"></i>
+        <i class="fas fa-share" data-toggle="tooltip" title="Compartir"></i>
+    </section>
+
+    <section id="UltimateFitTracker">
+        <h2>Presentación:</h2>
+        <p>Bienvenidos usuarios de mi página web. Una corta presentación, mi nombre es Santiago, soy entusiasta de la tecnología y de los deportes, esta página tiene el fin de servir como un portafolio, donde recopilaré algunos de mis trabajos que incorporen y mezclen mis aficiones, ¡dale un vistazo!</p>
+        <p>Mi proyecto Ultimate Fit Tracker se trata de una agenda personalizada a gusto del usuario, la cual tendrá un uso bastante útil para la vida deportista. La idea es que la aplicación misma oriente y dé consejos al usuario si este lo desea. De manera que cada experiencia de los usuarios es única y personalizada debido a sus características físicas y método de entrenamiento.</p>
+        <p>También, el "Reconocimiento de técnica" es una función de Ultimate Fit, herramienta la cual permitirá visualizar, identificar y delimitar la técnica realizada en un ejercicio, mostrando un porcentaje que indicará qué tan correcto está siendo realizado.</p>
+        <img class="centrada" src="LOGO.png" alt="LOGO.PNG">
+    </section>
+
+
+    <section id="Reconocimientodetécnica">
+        <h1>Reconocimiento de técnica:</h1>
+        <p>El reconocmiento de tecnica es un proyecto en fase inicial, el cual se incorpora a la aplicación Ultimate Fit Tracker, en esta fase inicial se buscar reconocer ejercicos que realiza el usuario.</p>
+        <p>Esta version protitpo detecta los movimientos, curl de bicep, press de hombro, remo para espalda, y de igual manera detecta cuando el usuario no se encuentra realizando ningun ejercicio. </p>
+        <p>Justo abajo dejo un boton de start, con el cual puedes probar libremente este programa de reconomiento! </p>
+        <div>Teachable Machine Pose Model</div>
+        <button type="button" onclick="init()">Start</button>
+        <div><canvas id="canvas"></canvas></div>
+        <div id="label-container"></div>
+    </section>
+
+    <section id="EncuestaStackOverflow">
+        <h2>Encuesta Stack Overflow:</h2>
+        <p>Uno de los primeros trabajos realizados a lo largo de este semestre, fue la infografia de stack overflow. Me permitio conocer y analizar, asi como sentar las bases para lo que se veria despues</p>
+        <p>Me parecio una gran plataforma, donde se reunen los estudiantes, profesores y expertos para hacer aportes al mundo de la tecnolgia y de el software. Como primer trabajo sento bien las bases para temas posteriores, dejo aca abajo la infografia que presente en base a la investigación realizada.</p>
+        <img class="centrada" src="INFO_1.jpg" alt="">
+        <img class="centrada" src="INFO_2.jpg" alt="">
+    </section>
+</body>
+<section id="Tecnologías">
+    <h2>Tecnologías en las apliaciones:</h2>
+    <p>De la misma manera que con la encuesta, realice una investigación sobre las diferentes bibliotecas, frameworks y tecnologia en general que usan las apliaciones mas conocidas y usadas del mundo actual.</p>
+    <p>De igual manera dejo mi trabajo en la parte de abajo. </p>
+    <img class="centrada" src="TEC1.jpg" alt="">
+    <img class="centrada" src="TEC2.jpg" alt="">
+    <img class="centrada" src="TEC3.jpg" alt="">
+</section>
+
+    <section id="Contacto">
+        <h2>Contacto:</h2>
+        <p>Dejo mi contacto para cualquier aclaración, duda o sugerencias, un saludo!</p>
+
+        <form>
+            <label for="Santiago Fierro">Nombre:</label>
+            <input type="text" id="nombre" name="nombre" required>
+
+            <label for="santiagofierr000122gmail.com">Correo electrónico:</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="2224077830">Mensaje:</label>
+            <textarea id="mensaje" name="mensaje" rows="4" required></textarea>
+
+            <button type="submit">Enviar mensaje</button>
+        </form>
+        <p>También puedes contactarme directamente a través de mi correo electrónico: <a href="mailto:santiagofierr00012@gmail.com">santiagofierr00012@gmail.com</a></p>
+</section>
+
+</html>
